@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3.5 IDE</title>
+    <link rel="stylesheet" href="web35ide.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js"></script>
+    <script src="peerconfig.js"></script>
+    <script src="peerjs.js"></script>
+</head>
+<body>
+    <div id="computers-tab">
+        <button id="" class="btn btngray">id</button>
+    </div>
+    <div class="header">
+        <h1>Web3.5 IDE</h1>
+        <div>
+            <button id="new-file-btn" class="btn">New File</button>
+            <button id="save-btn" class="btn">Save</button>
+            <button id="delete-btn" class="btn btn-danger">Delete</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <!-- File icons will be dynamically added here -->
+        </div>
+        
+        <div class="editor-container">
+            <textarea class="editor" id="editor" placeholder="Select a file to edit or create a new one..."></textarea>
+        </div>
+    </div>
+    
+    <div class="resizer" id="resizer"></div>
+    
+    <div class="console-container">
+        <div class="console-header">
+            <span>JavaScript Console</span>
+            <button id="clear-console-btn" class="btn">Clear</button>
+        </div>
+        <div class="console-content" id="console-content">
+            <!-- Console output will appear here -->
+        </div>
+        <div class="console-input-container">
+            <div class="console-prompt">&gt;</div>
+            <input type="text" class="console-input" id="console-input" placeholder="Enter JavaScript code...">
+        </div>
+    </div>
+    
+    <div class="create-file-modal" id="create-file-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Create New File</h2>
+            <div class="form-group">
+                <label for="file-name">File Name:</label>
+                <input type="text" id="file-name" class="form-control" placeholder="e.g., index.html">
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-create" class="btn btn-danger">Cancel</button>
+                <button id="confirm-create" class="btn">Create</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="web35ide.js?v=2"> </script>
+</body>
+</html>
