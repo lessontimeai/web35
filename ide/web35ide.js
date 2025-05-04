@@ -371,22 +371,32 @@ document.addEventListener("DOMContentLoaded", () => {
     // Iterate through the Set and create a button for each peer
 });
 
-setInterval(() => {
+function createTopTabButton(name, callback) {
+    const button = document.createElement("button");
+    button.id = name;
+    button.classList.add("btn", "btngray");
+    button.textContent = name;
+    button.onclick = callback;
+    return button;
+}
+
+function updateComputersTab() {
     const computersTab = document.getElementById("computers-tab");
-  
-    // Assuming network.allPeers is an array of peer IDs
-    const peers = network.getConnectedPeers();  // or fetch this from a method like network.getAllPeers()
-  
-    computersTab.innerHTML = ''; 
+    computersTab.innerHTML = '';
+
+    // Add the home button
+    computersTab.appendChild(createTopTabButton(`home-${network.peerId}`, loadFiles));
+
+    // Add buttons for connected peers
+    const peers = network.getConnectedPeers();
     peers.forEach(peer => {
-        const button = document.createElement("button");
-        button.id = `peer-${peer}`;  // Assign a unique ID based on the peer
-        button.classList.add("btn", "btngray");
-        button.textContent = peer;  // Set the button text to the peer value
-        computersTab.appendChild(button);  // Add the button to the div
-        button.onclick = () => {
-            console.log("Clicked on peer: ", peer);
-            network.sendTo(peer, {"command": "ls", "peerId": network.peerId});
-        }
-      });
-  }, 2000);
+        const callback = () => {
+            console.log("Clicked on peer:", peer);
+            network.sendTo(peer, { command: "ls", peerId: network.peerId });
+        };
+        computersTab.appendChild(createTopTabButton(`peer-${peer}`, callback));
+    });
+}
+
+// Update the computers tab every 2 seconds
+setInterval(updateComputersTab, 2000);
