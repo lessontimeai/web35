@@ -15,9 +15,22 @@ const resizer = document.getElementById('resizer');
 
 let currentFile = null;
 let files = {};
+let currentpeer = null;
 // Console history variables
 let consoleHistory = [];
 let historyIndex = -1;
+let copyBuffer = null;
+
+
+async function llm_response(prompt){
+    const generator = await pipeline('text-generation', 'Xenova/distilgpt2');
+    const output = await generator(prompt);
+    return output[0].generated_text;
+}
+
+
+
+
 
 // Load files from local storage
 function loadFiles() {
@@ -354,10 +367,24 @@ document.addEventListener("DOMContentLoaded", () => {
         "onData" : (data) => {
             console.log("Received data from peer: ", data);
             if (data["command"] != null){
-                if (data["command"]="ls"){
+                if (data["command"]=="ls"){
                     console.log("Received ls command from peer: ", data);
                     const storedFiles = localStorage.getItem('fs');
                     network.sendTo(data["peerId"], {"files": storedFiles});
+                }
+                if (data["command"]=="paste"){
+                    console.log("Received file command from peer: ", data);
+                    const file = JSON.parse(data["file"]);
+                    files[file.name] = file.content;
+                    saveFiles();
+                    logToConsole(`Received file "${file.name}" from ${data["peerId"]}`, 'info');
+                }
+                if (data["command"]=="generate"){
+                    console.log("Received generate command from peer: ", data);
+                    const prompt = data["prompt"];
+                    llm_response(prompt).then(response => {
+                        network.sendTo(data["peerId"], {"response": response});
+                    });
                 }
             }
             if (data["files"] != null){
@@ -365,6 +392,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 files = data["files"];
                 files = JSON.parse(files);
                 renderFileIcons();
+            }
+            if (data["response"] != null){
+                const response = data["response"];
+                logToConsole(`Received response from ${data["peerId"]}: ${response}`, 'info');
             }
         }
     });
@@ -392,11 +423,52 @@ function updateComputersTab() {
     peers.forEach(peer => {
         const callback = () => {
             console.log("Clicked on peer:", peer);
+            currentpeer = peer;
             network.sendTo(peer, { command: "ls", peerId: network.peerId });
         };
         computersTab.appendChild(createTopTabButton(`peer-${peer}`, callback));
     });
 }
 
+function sendGeneratetoCurrentPeer(prompt){
+    if (currentpeer != null){
+        network.sendTo(currentpeer, { command: "generate", prompt: prompt, peerId: network.peerId });
+    } else {
+        logToConsole('No peer selected to send the prompt.', 'error');
+    }
+}
+
+
 // Update the computers tab every 2 seconds
 setInterval(updateComputersTab, 2000);
+
+
+// Handle Ctrl+S: copy current file into buffer
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+    e.preventDefault();
+    if (currentFile) {
+      copyBuffer = { name: currentFile, content: files[currentFile] };
+      logToConsole(`Copied "${currentFile}" to buffer. Press Ctrl+V to send.`, 'info');
+    } else {
+      logToConsole('No file selected to copy.', 'error');
+    }
+  }
+  // Handle Ctrl+V: send buffer to peers
+  if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+    e.preventDefault();
+    if (copyBuffer) {
+      const peers = network.getConnectedPeers();
+      if (peers.length === 0) {
+        logToConsole('No peers connected.', 'error');
+      } else {
+        network.sendTo(currentpeer, { command: "paste", 
+                                file: JSON.stringify(copyBuffer),  // Send the file as a string 
+                                peerId: network.peerId });
+        logToConsole(`Sent "${copyBuffer.name}" to ${peers.length} peer(s).`, 'info');
+      }
+    } else {
+      logToConsole('Copy buffer is empty. Use Ctrl+S first.', 'error');
+    }
+  }
+});

@@ -8,6 +8,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js"></script>
     <script src="peerconfig.js"></script>
     <script src="peerjs.js"></script>
+    <script type="module">
+    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1';    
+    // Make it globally available
+    window.pipeline = pipeline;
+    // Optional: dispatch event when ready
+    window.dispatchEvent(new CustomEvent('pipelineReady'));
+    </script>
 </head>
 <body>
     <div id="computers-tab">
