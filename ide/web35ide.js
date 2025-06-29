@@ -1,17 +1,4 @@
 // Initialize the editor
-const editor = document.getElementById('editor');
-const sidebar = document.getElementById('sidebar');
-const consoleContent = document.getElementById('console-content');
-const consoleInput = document.getElementById('console-input');
-const saveBtn = document.getElementById('save-btn');
-const deleteBtn = document.getElementById('delete-btn');
-const newFileBtn = document.getElementById('new-file-btn');
-const clearConsoleBtn = document.getElementById('clear-console-btn');
-const createFileModal = document.getElementById('create-file-modal');
-const fileNameInput = document.getElementById('file-name');
-const confirmCreateBtn = document.getElementById('confirm-create');
-const cancelCreateBtn = document.getElementById('cancel-create');
-const resizer = document.getElementById('resizer');
 
 let currentFile = null;
 let files = {};
@@ -20,17 +7,6 @@ let currentpeer = null;
 let consoleHistory = [];
 let historyIndex = -1;
 let copyBuffer = null;
-
-
-async function llm_response(prompt){
-    const generator = await pipeline('text-generation', 'Xenova/distilgpt2');
-    const output = await generator(prompt);
-    return output[0].generated_text;
-}
-
-
-
-
 
 // Load files from local storage
 function loadFiles() {
@@ -283,13 +259,6 @@ function makeResizable() {
     }
 }
 
-// Event listeners
-saveBtn.addEventListener('click', saveCurrentFile);
-deleteBtn.addEventListener('click', deleteCurrentFile);
-newFileBtn.addEventListener('click', showCreateFileModal);
-confirmCreateBtn.addEventListener('click', () => createNewFile(fileNameInput.value.trim()));
-cancelCreateBtn.addEventListener('click', hideCreateFileModal);
-clearConsoleBtn.addEventListener('click', clearConsole);
 
 // Console input event listener with history navigation
 consoleInput.addEventListener('keydown', (e) => {
@@ -412,7 +381,7 @@ function createTopTabButton(name, callback) {
 }
 
 function updateComputersTab() {
-    const computersTab = document.getElementById("computers-tab");
+    const computersTab = document.getElementById("computersTab");
     computersTab.innerHTML = '';
 
     // Add the home button
@@ -472,3 +441,22 @@ document.addEventListener('keydown', e => {
     }
   }
 });
+
+
+listeners = {
+    "saveBtn" : saveCurrentFile,
+    "deleteBtn" : deleteCurrentFile,
+    "newFileBtn" : showCreateFileModal,
+    "confirmCreateBtn" : () => createNewFile(fileNameInput.value.trim()),
+    "cancelCreateBtn" : hideCreateFileModal,
+    "clearConsoleBtn" : clearConsole,
+}
+
+for (const [id, listener] of Object.entries(listeners)) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.addEventListener('click', listener);
+    } else {
+        console.warn(`Element with ID "${id}" not found.`);
+    }
+}
