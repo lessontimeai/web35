@@ -9,6 +9,7 @@
     <script src="peerconfig.js"></script>
     <script src="peerjs.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"> </script>
+    <script src="neuralnetworks.js"></script>
     <script type="module">
     import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1';
         // Make it globally available
@@ -25,6 +26,7 @@
         <h1>Web3.5 IDE</h1>
         <div>
             <button id="newFileBtn" class="btn">New File</button>
+            <button id="importBtn" class="btn">Import</button>
             <button id="saveBtn" class="btn">Save</button>
             <button id="deleteBtn" class="btn btn-danger">Delete</button>
         </div>
@@ -69,6 +71,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- Hidden file input for import functionality -->
+    <input type="file" id="fileInput" multiple accept="*/*" style="display: none;">
     
     <script src="llm.js?v=2"></script>
     <script src="web35ide.js?v=2"></script>

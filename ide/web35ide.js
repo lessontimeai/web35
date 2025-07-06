@@ -50,6 +50,9 @@ function renderFileIcons() {
     sidebar.innerHTML = '';
     
     for (const fileName in files) {
+        const fileData = files[fileName];
+        const isImage = fileData && typeof fileData === 'object' && fileData.type === 'image';
+        
         const fileIcon = document.createElement('div');
         fileIcon.className = 'file-icon';
         if (currentFile === fileName) {
@@ -58,7 +61,14 @@ function renderFileIcons() {
         
         const fileIconImg = document.createElement('div');
         fileIconImg.className = 'file-icon-img';
-        fileIconImg.textContent = 'HTML';
+        
+        if (isImage) {
+            // Show a small preview of the image
+            fileIconImg.innerHTML = `<img src="${fileData.content}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 3px;" alt="${fileName}">`;
+        } else {
+            // Show text file icon
+            fileIconImg.textContent = getFileTypeIcon(fileName);
+        }
         
         const fileIconName = document.createElement('div');
         fileIconName.className = 'file-icon-name';
@@ -73,16 +83,113 @@ function renderFileIcons() {
     }
 }
 
+// Get appropriate icon text based on file extension
+function getFileTypeIcon(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    
+    switch (extension) {
+        case 'html':
+        case 'htm':
+            return 'HTML';
+        case 'css':
+            return 'CSS';
+        case 'js':
+        case 'jsx':
+            return 'JS';
+        case 'json':
+            return 'JSON';
+        case 'md':
+            return 'MD';
+        case 'txt':
+            return 'TXT';
+        case 'xml':
+            return 'XML';
+        case 'py':
+            return 'PY';
+        case 'java':
+            return 'JAVA';
+        case 'cpp':
+        case 'c':
+            return 'C++';
+        default:
+            return 'FILE';
+    }
+}
+
 // Select a file to edit
 function selectFile(fileName) {
     currentFile = fileName;
-    editor.value = files[fileName];
+    const fileData = files[fileName];
+    
+    // Check if this is an image file
+    if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
+        // Display image instead of text
+        displayImage(fileData.content, fileName);
+    } else {
+        // Handle regular text files
+        const content = typeof fileData === 'string' ? fileData : fileData.content || '';
+        editor.value = content;
+        editor.style.display = 'block';
+        // Hide any existing image display
+        const existingImageDisplay = document.getElementById('imageDisplay');
+        if (existingImageDisplay) {
+            existingImageDisplay.style.display = 'none';
+        }
+    }
+    
     renderFileIcons();
+}
+
+// Display image in the editor area
+function displayImage(dataUrl, fileName) {
+    // Hide the text editor
+    editor.style.display = 'none';
+    
+    // Create or update image display
+    let imageDisplay = document.getElementById('imageDisplay');
+    if (!imageDisplay) {
+        imageDisplay = document.createElement('div');
+        imageDisplay.id = 'imageDisplay';
+        imageDisplay.style.cssText = `
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background-color: #1e1e1e;
+            overflow: auto;
+        `;
+        
+        const editorContainer = document.querySelector('.editor-container');
+        editorContainer.appendChild(imageDisplay);
+    }
+    
+    imageDisplay.innerHTML = `
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h3 style="color: #f0f0f0; margin-bottom: 10px;">${fileName}</h3>
+            <img src="${dataUrl}" style="max-width: 100%; max-height: 70vh; border: 1px solid #333; border-radius: 5px;" alt="${fileName}">
+        </div>
+        <div style="color: #888; font-size: 12px; text-align: center;">
+            Image files are displayed as images and cannot be edited as text.
+        </div>
+    `;
+    
+    imageDisplay.style.display = 'flex';
 }
 
 // Save the current file
 function saveCurrentFile() {
     if (currentFile) {
+        const fileData = files[currentFile];
+        
+        // Check if this is an image file
+        if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
+            logToConsole('Image files cannot be edited and are already saved.', 'info');
+            return;
+        }
+        
+        // Save text file
         files[currentFile] = editor.value;
         saveFiles();
         logToConsole('File saved: ' + currentFile, 'info');
@@ -259,6 +366,119 @@ function makeResizable() {
     }
 }
 
+// Show import file dialog
+function showImportDialog() {
+    const fileInput = document.getElementById('fileInput');
+    fileInput.click();
+}
+
+// Handle files selected from import dialog
+function handleImportFiles(event) {
+    const files = event.target.files;
+    if (files.length > 0) {
+        handleFiles(files);
+        // Reset the file input so the same file can be selected again
+        event.target.value = '';
+    }
+}
+
+// Handle multiple files (shared by drag and drop and file dialog)
+function handleFiles(fileList) {
+    [...fileList].forEach(uploadFile);
+}
+
+// Upload a single file (shared by drag and drop and file dialog)
+function uploadFile(file) {
+    const reader = new FileReader();
+    const fileName = file.name;
+    
+    // Check if file is an image
+    const isImage = file.type.startsWith('image/');
+    
+    reader.onload = function(e) {
+        const content = e.target.result;
+        
+        // Check if file already exists
+        if (files[fileName]) {
+            if (!confirm(`File "${fileName}" already exists. Do you want to overwrite it?`)) {
+                return;
+            }
+        }
+        
+        // Add file to the files object with metadata
+        if (isImage) {
+            files[fileName] = {
+                type: 'image',
+                content: content, // This will be a data URL
+                originalName: fileName
+            };
+        } else {
+            files[fileName] = content; // Keep text files as simple strings for backward compatibility
+        }
+        
+        saveFiles();
+        renderFileIcons();
+        
+        // Select the newly imported file
+        selectFile(fileName);
+        
+        logToConsole(`File imported: ${fileName}${isImage ? ' (image)' : ''}`, 'info');
+    };
+    
+    reader.onerror = function() {
+        logToConsole(`Error reading file: ${file.name}`, 'error');
+    };
+    
+    // Read the file differently based on type
+    if (isImage) {
+        reader.readAsDataURL(file);
+    } else {
+        reader.readAsText(file);
+    }
+}
+
+// Handle drag and drop functionality
+function handleDragAndDrop() {
+    const sidebar = document.getElementById('sidebar');
+    
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        sidebar.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    // Highlight drop area when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        sidebar.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        sidebar.addEventListener(eventName, unhighlight, false);
+    });
+    
+    // Handle dropped files
+    sidebar.addEventListener('drop', handleDrop, false);
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    function highlight(e) {
+        sidebar.classList.add('drag-over');
+    }
+    
+    function unhighlight(e) {
+        sidebar.classList.remove('drag-over');
+    }
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        handleFiles(files);
+    }
+}
 
 // Console input event listener with history navigation
 consoleInput.addEventListener('keydown', (e) => {
@@ -323,6 +543,7 @@ window.addEventListener('beforeunload', () => {
 loadFiles();
 loadConsoleHistory();
 makeResizable();
+handleDragAndDrop();
 
 // Welcome messages
 logToConsole('Welcome to Web3.5 IDE!', 'info');
@@ -346,6 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const file = JSON.parse(data["file"]);
                     files[file.name] = file.content;
                     saveFiles();
+                    renderFileIcons();
                     logToConsole(`Received file "${file.name}" from ${data["peerId"]}`, 'info');
                 }
                 if (data["command"]=="generate"){
@@ -417,7 +639,15 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
     e.preventDefault();
     if (currentFile) {
-      copyBuffer = { name: currentFile, content: files[currentFile] };
+      const fileData = files[currentFile];
+      
+      // Handle both image and text files
+      if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
+        copyBuffer = { name: currentFile, content: fileData };
+      } else {
+        copyBuffer = { name: currentFile, content: fileData };
+      }
+      
       logToConsole(`Copied "${currentFile}" to buffer. Press Ctrl+V to send.`, 'info');
     } else {
       logToConsole('No file selected to copy.', 'error');
@@ -447,6 +677,7 @@ listeners = {
     "saveBtn" : saveCurrentFile,
     "deleteBtn" : deleteCurrentFile,
     "newFileBtn" : showCreateFileModal,
+    "importBtn" : showImportDialog,
     "confirmCreateBtn" : () => createNewFile(fileNameInput.value.trim()),
     "cancelCreateBtn" : hideCreateFileModal,
     "clearConsoleBtn" : clearConsole,
@@ -459,4 +690,10 @@ for (const [id, listener] of Object.entries(listeners)) {
     } else {
         console.warn(`Element with ID "${id}" not found.`);
     }
+}
+
+// Add file input event listener
+const fileInput = document.getElementById('fileInput');
+if (fileInput) {
+    fileInput.addEventListener('change', handleImportFiles);
 }
