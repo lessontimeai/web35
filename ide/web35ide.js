@@ -3,18 +3,66 @@
 let currentFile = null;
 let files = {};
 let currentpeer = null;
+let currentPath = []; // Track current folder path
+let expandedFolders = new Set(); // Track which folders are expanded
 // Console history variables
 let consoleHistory = [];
 let historyIndex = -1;
 let copyBuffer = null;
 
 // Load files from local storage
+// "fs/documents/"
 function loadFiles() {
+    files = {}; // Reset files structure
+    const keys = Object.keys(localStorage);
+    
+    // Process all localStorage keys that start with "fs/"
+    for (const key of keys) {
+        if (key.startsWith("fs/")) {
+            // Remove "fs/" prefix and split the remaining path
+            const pathWithoutPrefix = key.substring(3); // Remove "fs/"
+            if (pathWithoutPrefix) {
+                const pathParts = pathWithoutPrefix.split("/");
+                const content = localStorage.getItem(key);
+                
+                // Navigate/create the nested structure
+                let currentLevel = files;
+                
+                // Process all path parts except the last one (which is the filename)
+                for (let i = 0; i < pathParts.length - 1; i++) {
+                    const folderName = pathParts[i];
+                    if (!currentLevel[folderName]) {
+                        currentLevel[folderName] = {}; // Create folder if it doesn't exist
+                    }
+                    currentLevel = currentLevel[folderName];
+                }
+                
+                // Set the file content at the final location
+                const fileName = pathParts[pathParts.length - 1];
+                try {
+                    // Try to parse as JSON first (for image files and other structured data)
+                    currentLevel[fileName] = JSON.parse(content);
+                } catch (e) {
+                    // If not valid JSON, store as plain text
+                    currentLevel[fileName] = content;
+                }
+            }
+        }
+    }
+
+    // Also load the legacy 'fs' key if it exists for backward compatibility
     const storedFiles = localStorage.getItem('fs');
     if (storedFiles) {
-        files = JSON.parse(storedFiles);
-        renderFileIcons();
+        try {
+            const legacyFiles = JSON.parse(storedFiles);
+            // Merge legacy files with the new structure
+            Object.assign(files, legacyFiles);
+        } catch (e) {
+            console.warn('Failed to parse legacy fs data:', e);
+        }
     }
+    
+    renderFileIcons();
 }
 
 // Load console history from local storage
@@ -36,7 +84,36 @@ function loadConsoleHistory() {
 }
 
 // Save files to local storage
+function saveFile(path, content) {
+    localStorage.setItem(path, content);
+}
+
+// Save the entire files structure to localStorage with proper paths
 function saveFiles() {
+    // Recursively save all files with their proper paths
+    function saveRecursive(obj, currentPath = []) {
+        for (const [name, content] of Object.entries(obj)) {
+            const fullPath = ['fs', ...currentPath, name].join('/');
+            
+            if (typeof content === 'object' && content !== null && !content.type) {
+                // This is a folder, recurse into it
+                saveRecursive(content, [...currentPath, name]);
+            } else {
+                // This is a file, save it
+                if (typeof content === 'object') {
+                    // For structured data (like images), save as JSON
+                    localStorage.setItem(fullPath, JSON.stringify(content));
+                } else {
+                    // For plain text files, save as string
+                    localStorage.setItem(fullPath, content);
+                }
+            }
+        }
+    }
+    
+    saveRecursive(files);
+    
+    // Also save the legacy 'fs' key for backward compatibility
     localStorage.setItem('fs', JSON.stringify(files));
 }
 
@@ -45,24 +122,118 @@ function saveConsoleHistory() {
     localStorage.setItem('htmlEditorConsoleHistory', JSON.stringify(consoleHistory));
 }
 
+// Check if an object represents a folder
+function isFolder(obj) {
+    if (typeof obj !== 'object' || obj === null) return false;
+    if (obj.type === 'image') return false; // Image files are objects but not folders
+    return Object.keys(obj).length > 0;
+}
+
+// Get current directory contents based on currentPath
+function getCurrentDirectory() {
+    let current = files;
+    for (const pathSegment of currentPath) {
+        if (current[pathSegment] && isFolder(current[pathSegment])) {
+            current = current[pathSegment];
+        } else {
+            // Invalid path, reset to root
+            currentPath = [];
+            return files;
+        }
+    }
+    return current;
+}
+
+// Get full path string for display
+function getFullPath(name = '') {
+    const subfolder = currentPath.length > 0 ? currentPath.join('/') + '/' : '';
+    const pathStr = 'fs/' + subfolder + name;
+    return pathStr;
+}
+
+// Navigate to a folder
+function navigateToFolder(folderName) {
+    const currentDir = getCurrentDirectory();
+    if (currentDir[folderName] && isFolder(currentDir[folderName])) {
+        currentPath.push(folderName);
+        renderFileIcons();
+    }
+}
+
+// Navigate up one level
+function navigateUp() {
+    if (currentPath.length > 0) {
+        currentPath.pop();
+        renderFileIcons();
+    }
+}
+
 // Render file icons in the sidebar
 function renderFileIcons() {
     sidebar.innerHTML = '';
     
-    for (const fileName in files) {
-        const fileData = files[fileName];
+    // Add navigation breadcrumbs
+    const breadcrumbDiv = document.createElement('div');
+    breadcrumbDiv.className = 'breadcrumbs';
+    breadcrumbDiv.style.cssText = `
+        padding: 10px;
+        border-bottom: 1px solid #333;
+        font-size: 12px;
+        color: #888;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    `;
+    
+    // Add root link
+    const rootLink = document.createElement('span');
+    rootLink.textContent = 'root';
+    rootLink.style.cssText = 'cursor: pointer; color: #4a9eff;';
+    rootLink.addEventListener('click', () => {
+        currentPath = [];
+        renderFileIcons();
+    });
+    breadcrumbDiv.appendChild(rootLink);
+    
+    // Add path segments
+    for (let i = 0; i < currentPath.length; i++) {
+        const separator = document.createElement('span');
+        separator.textContent = ' / ';
+        breadcrumbDiv.appendChild(separator);
+        
+        const pathLink = document.createElement('span');
+        pathLink.textContent = currentPath[i];
+        pathLink.style.cssText = 'cursor: pointer; color: #4a9eff;';
+        pathLink.addEventListener('click', () => {
+            currentPath = currentPath.slice(0, i + 1);
+            renderFileIcons();
+        });
+        breadcrumbDiv.appendChild(pathLink);
+    }
+    
+    sidebar.appendChild(breadcrumbDiv);
+    
+    const currentDir = getCurrentDirectory();
+    
+    for (const fileName in currentDir) {
+        const fileData = currentDir[fileName];
         const isImage = fileData && typeof fileData === 'object' && fileData.type === 'image';
+        const isFolderItem = isFolder(fileData);
         
         const fileIcon = document.createElement('div');
         fileIcon.className = 'file-icon';
-        if (currentFile === fileName) {
+        if (currentFile === getFullPath(fileName)) {
             fileIcon.classList.add('active');
         }
         
         const fileIconImg = document.createElement('div');
         fileIconImg.className = 'file-icon-img';
         
-        if (isImage) {
+        if (isFolderItem) {
+            // Show folder icon
+            fileIconImg.textContent = '📁';
+            fileIconImg.style.fontSize = '16px';
+        } else if (isImage) {
             // Show a small preview of the image
             fileIconImg.innerHTML = `<img src="${fileData.content}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 3px;" alt="${fileName}">`;
         } else {
@@ -77,7 +248,11 @@ function renderFileIcons() {
         fileIcon.appendChild(fileIconImg);
         fileIcon.appendChild(fileIconName);
         
-        fileIcon.addEventListener('click', () => selectFile(fileName));
+        if (isFolderItem) {
+            fileIcon.addEventListener('click', () => navigateToFolder(fileName));
+        } else {
+            fileIcon.addEventListener('click', () => selectFile(fileName));
+        }
         
         sidebar.appendChild(fileIcon);
     }
@@ -118,8 +293,11 @@ function getFileTypeIcon(fileName) {
 
 // Select a file to edit
 function selectFile(fileName) {
-    currentFile = fileName;
-    const fileData = files[fileName];
+    const fullPath = getFullPath(fileName);
+    currentFile = fullPath;
+    
+    const currentDir = getCurrentDirectory();
+    const fileData = currentDir[fileName];
     
     // Check if this is an image file
     if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
@@ -181,7 +359,9 @@ function displayImage(dataUrl, fileName) {
 // Save the current file
 function saveCurrentFile() {
     if (currentFile) {
-        const fileData = files[currentFile];
+        const fileName = currentFile.split('/').pop(); // Get just the filename
+        const currentDir = getCurrentDirectory();
+        const fileData = currentDir[fileName];
         
         // Check if this is an image file
         if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
@@ -190,7 +370,7 @@ function saveCurrentFile() {
         }
         
         // Save text file
-        files[currentFile] = editor.value;
+        currentDir[fileName] = editor.value;
         saveFiles();
         logToConsole('File saved: ' + currentFile, 'info');
     } else {
@@ -202,7 +382,9 @@ function saveCurrentFile() {
 function deleteCurrentFile() {
     if (currentFile) {
         if (confirm(`Are you sure you want to delete "${currentFile}"?`)) {
-            delete files[currentFile];
+            const fileName = currentFile.split('/').pop(); // Get just the filename
+            const currentDir = getCurrentDirectory();
+            delete currentDir[fileName];
             saveFiles();
             editor.value = '';
             currentFile = null;
@@ -217,36 +399,89 @@ function deleteCurrentFile() {
 // Show the create file modal
 function showCreateFileModal() {
     createFileModal.style.display = 'flex';
+    document.querySelector('.modal-title').textContent = 'Create New File';
     fileNameInput.value = '';
+    fileNameInput.placeholder = 'e.g., index.html';
     fileNameInput.focus();
+    
+    // Set the confirm button behavior
+    const confirmBtn = document.getElementById('confirmCreateBtn');
+    confirmBtn.onclick = () => createNewFile(fileNameInput.value.trim());
+}
+
+// Show the create folder modal (same modal, different handling)
+function showCreateFolderModal() {
+    createFileModal.style.display = 'flex';
+    document.querySelector('.modal-title').textContent = 'Create New Folder';
+    fileNameInput.value = '';
+    fileNameInput.placeholder = 'e.g., components';
+    fileNameInput.focus();
+    
+    // Set the confirm button behavior
+    const confirmBtn = document.getElementById('confirmCreateBtn');
+    confirmBtn.onclick = () => createNewFolder(fileNameInput.value.trim());
 }
 
 // Hide the create file modal
 function hideCreateFileModal() {
     createFileModal.style.display = 'none';
+    // Reset to default state
+    document.querySelector('.modal-title').textContent = 'Create New File';
+    fileNameInput.placeholder = 'e.g., index.html';
+    const confirmBtn = document.getElementById('confirmCreateBtn');
+    confirmBtn.onclick = () => createNewFile(fileNameInput.value.trim());
 }
 
 // Create a new file
 function createNewFile(fileName) {
-    
     if (!fileName) {
         alert('Please enter a file name.');
         return;
     }
     
-    if (files[fileName]) {
+    const currentDir = getCurrentDirectory();
+    
+    if (currentDir[fileName]) {
         if (!confirm(`File "${fileName}" already exists. Do you want to overwrite it?`)) {
             return;
         }
     }
     
-    files[fileName] = '';
-    saveFiles();
-    currentFile = fileName;
+    currentDir[fileName] = '';
+    currentFile = getFullPath(fileName);
     editor.value = '';
     renderFileIcons();
     hideCreateFileModal();
-    logToConsole('New file created: ' + fileName, 'info');
+    saveFile(currentFile, '');
+    logToConsole('New file created: ' + currentFile, 'info');
+
+}
+
+// Create a new folder
+function createNewFolder(folderName) {
+    if (!folderName) {
+        alert('Please enter a folder name.');
+        return;
+    }
+    
+    // Validate folder name (no special characters that could break paths)
+    if (folderName.includes('/') || folderName.includes('\\')) {
+        alert('Folder names cannot contain slashes.');
+        return;
+    }
+    
+    const currentDir = getCurrentDirectory();
+    
+    if (currentDir[folderName]) {
+        alert(`"${folderName}" already exists in this directory.`);
+        return;
+    }
+    
+    currentDir[folderName] = {}; // Empty object represents a folder
+    saveFiles();
+    renderFileIcons();
+    hideCreateFileModal();
+    logToConsole('New folder created: ' + getFullPath(folderName), 'info');
 }
 
 // Log message to the console
@@ -397,23 +632,24 @@ function uploadFile(file) {
     
     reader.onload = function(e) {
         const content = e.target.result;
+        const currentDir = getCurrentDirectory();
         
         // Check if file already exists
-        if (files[fileName]) {
+        if (currentDir[fileName]) {
             if (!confirm(`File "${fileName}" already exists. Do you want to overwrite it?`)) {
                 return;
             }
         }
         
-        // Add file to the files object with metadata
+        // Add file to the current directory with metadata
         if (isImage) {
-            files[fileName] = {
+            currentDir[fileName] = {
                 type: 'image',
                 content: content, // This will be a data URL
                 originalName: fileName
             };
         } else {
-            files[fileName] = content; // Keep text files as simple strings for backward compatibility
+            currentDir[fileName] = content; // Keep text files as simple strings for backward compatibility
         }
         
         saveFiles();
@@ -422,7 +658,8 @@ function uploadFile(file) {
         // Select the newly imported file
         selectFile(fileName);
         
-        logToConsole(`File imported: ${fileName}${isImage ? ' (image)' : ''}`, 'info');
+        const fullPath = getFullPath(fileName);
+        logToConsole(`File imported: ${fullPath}${isImage ? ' (image)' : ''}`, 'info');
     };
     
     reader.onerror = function() {
@@ -565,10 +802,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data["command"]=="paste"){
                     console.log("Received file command from peer: ", data);
                     const file = JSON.parse(data["file"]);
-                    files[file.name] = file.content;
+                    
+                    // Navigate to the correct directory or create it if it doesn't exist
+                    let targetDir = files;
+                    if (file.path && file.path.length > 0) {
+                        for (const pathSegment of file.path) {
+                            if (!targetDir[pathSegment]) {
+                                targetDir[pathSegment] = {}; // Create folder if it doesn't exist
+                            }
+                            targetDir = targetDir[pathSegment];
+                        }
+                    }
+                    
+                    targetDir[file.name] = file.content;
                     saveFiles();
                     renderFileIcons();
-                    logToConsole(`Received file "${file.name}" from ${data["peerId"]}`, 'info');
+                    const fullPath = file.path && file.path.length > 0 ? 
+                                    file.path.join('/') + '/' + file.name : file.name;
+                    logToConsole(`Received file "${fullPath}" from ${data["peerId"]}`, 'info');
                 }
                 if (data["command"]=="generate"){
                     console.log("Received generate command from peer: ", data);
@@ -639,13 +890,15 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
     e.preventDefault();
     if (currentFile) {
-      const fileData = files[currentFile];
+      const fileName = currentFile.split('/').pop(); // Get just the filename
+      const currentDir = getCurrentDirectory();
+      const fileData = currentDir[fileName];
       
       // Handle both image and text files
       if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
-        copyBuffer = { name: currentFile, content: fileData };
+        copyBuffer = { name: fileName, content: fileData, path: currentPath.slice() };
       } else {
-        copyBuffer = { name: currentFile, content: fileData };
+        copyBuffer = { name: fileName, content: fileData, path: currentPath.slice() };
       }
       
       logToConsole(`Copied "${currentFile}" to buffer. Press Ctrl+V to send.`, 'info');
@@ -664,10 +917,10 @@ document.addEventListener('keydown', e => {
         network.sendTo(currentpeer, { command: "paste", 
                                 file: JSON.stringify(copyBuffer),  // Send the file as a string 
                                 peerId: network.peerId });
-        logToConsole(`Sent "${copyBuffer.name}" to ${peers.length} peer(s).`, 'info');
+        logToConsole(`Sent "${copyBuffer.name}" to ${currentpeer ? '1 peer' : peers.length + ' peer(s)'}.`, 'info');
       }
     } else {
-      logToConsole('Copy buffer is empty. Use Ctrl+S first.', 'error');
+      logToConsole('Copy buffer is empty. Use Ctrl+C first.', 'error');
     }
   }
 });
@@ -677,8 +930,8 @@ listeners = {
     "saveBtn" : saveCurrentFile,
     "deleteBtn" : deleteCurrentFile,
     "newFileBtn" : showCreateFileModal,
+    "newFolderBtn" : showCreateFolderModal,
     "importBtn" : showImportDialog,
-    "confirmCreateBtn" : () => createNewFile(fileNameInput.value.trim()),
     "cancelCreateBtn" : hideCreateFileModal,
     "clearConsoleBtn" : clearConsole,
 }
