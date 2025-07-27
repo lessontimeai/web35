@@ -14,6 +14,12 @@ let copyBuffer = null;
 // "fs/documents/"
 function loadFiles() {
     files = {}; // Reset files structure
+    
+    // Ensure drawings folder exists
+    if (!localStorage.getItem('fs/drawings/')) {
+        files.drawings = {};
+    }
+    
     const keys = Object.keys(localStorage);
     
     // Process all localStorage keys that start with "fs/"
@@ -50,17 +56,6 @@ function loadFiles() {
         }
     }
 
-    // Also load the legacy 'fs' key if it exists for backward compatibility
-    const storedFiles = localStorage.getItem('fs');
-    if (storedFiles) {
-        try {
-            const legacyFiles = JSON.parse(storedFiles);
-            // Merge legacy files with the new structure
-            Object.assign(files, legacyFiles);
-        } catch (e) {
-            console.warn('Failed to parse legacy fs data:', e);
-        }
-    }
     
     renderFileIcons();
 }
@@ -303,15 +298,23 @@ function selectFile(fileName) {
     if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
         // Display image instead of text
         displayImage(fileData.content, fileName);
+    } else if (fileName.toLowerCase().endsWith('.svg')) {
+        // Check if this is an SVG file and render it
+        const content = typeof fileData === 'string' ? fileData : fileData.content || '';
+        displaySVG(content, fileName);
     } else {
         // Handle regular text files
         const content = typeof fileData === 'string' ? fileData : fileData.content || '';
         editor.value = content;
         editor.style.display = 'block';
-        // Hide any existing image display
+        // Hide any existing displays
         const existingImageDisplay = document.getElementById('imageDisplay');
         if (existingImageDisplay) {
             existingImageDisplay.style.display = 'none';
+        }
+        const existingSVGDisplay = document.getElementById('svgDisplay');
+        if (existingSVGDisplay) {
+            existingSVGDisplay.style.display = 'none';
         }
     }
     
@@ -356,6 +359,119 @@ function displayImage(dataUrl, fileName) {
     imageDisplay.style.display = 'flex';
 }
 
+// Display SVG in the editor area
+function displaySVG(svgContent, fileName) {
+    // Hide the text editor
+    editor.style.display = 'none';
+    
+    // Hide any existing image display
+    const existingImageDisplay = document.getElementById('imageDisplay');
+    if (existingImageDisplay) {
+        existingImageDisplay.style.display = 'none';
+    }
+    
+    // Create or update SVG display
+    let svgDisplay = document.getElementById('svgDisplay');
+    if (!svgDisplay) {
+        svgDisplay = document.createElement('div');
+        svgDisplay.id = 'svgDisplay';
+        svgDisplay.style.cssText = `
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background-color: #1e1e1e;
+            overflow: auto;
+        `;
+        
+        const editorContainer = document.querySelector('.editor-container');
+        editorContainer.appendChild(svgDisplay);
+    }
+    
+    // Create a wrapper for the SVG with better styling
+    const svgWrapper = document.createElement('div');
+    svgWrapper.style.cssText = `
+        background: white;
+        border: 1px solid #333;
+        border-radius: 5px;
+        padding: 20px;
+        max-width: 100%;
+        max-height: 70vh;
+        overflow: auto;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    `;
+    
+    try {
+        // Try to parse and render the SVG
+        svgWrapper.innerHTML = svgContent;
+        
+        // Find the SVG element and ensure it's properly sized
+        const svgElement = svgWrapper.querySelector('svg');
+        if (svgElement) {
+            // Make SVG responsive
+            if (!svgElement.getAttribute('width') && !svgElement.getAttribute('height')) {
+                svgElement.setAttribute('width', '400');
+                svgElement.setAttribute('height', '300');
+            }
+            svgElement.style.maxWidth = '100%';
+            svgElement.style.height = 'auto';
+        }
+        
+        svgDisplay.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h3 style="color: #f0f0f0; margin-bottom: 10px;">${fileName}</h3>
+            </div>
+        `;
+        
+        svgDisplay.appendChild(svgWrapper);
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.style.cssText = 'color: #888; font-size: 12px; text-align: center; margin-top: 15px;';
+        infoDiv.innerHTML = `
+            SVG files are displayed as rendered graphics. 
+            <button onclick="editSVGAsText('${fileName}')" style="background: #4a9eff; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-left: 10px; cursor: pointer;">Edit as Text</button>
+        `;
+        svgDisplay.appendChild(infoDiv);
+        
+    } catch (error) {
+        // If SVG parsing fails, show error message
+        svgDisplay.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h3 style="color: #f0f0f0; margin-bottom: 10px;">${fileName}</h3>
+                <div style="color: #e74c3c; padding: 20px; border: 1px solid #e74c3c; border-radius: 5px; background: rgba(231, 76, 60, 0.1);">
+                    Invalid SVG content or parsing error
+                </div>
+            </div>
+            <div style="color: #888; font-size: 12px; text-align: center;">
+                <button onclick="editSVGAsText('${fileName}')" style="background: #4a9eff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Edit as Text</button>
+            </div>
+        `;
+    }
+    
+    svgDisplay.style.display = 'flex';
+}
+
+// Edit SVG as text (switch from rendered view to text editor)
+function editSVGAsText(fileName) {
+    const currentDir = getCurrentDirectory();
+    const fileData = currentDir[fileName];
+    const content = typeof fileData === 'string' ? fileData : fileData.content || '';
+    
+    // Hide SVG display
+    const svgDisplay = document.getElementById('svgDisplay');
+    if (svgDisplay) {
+        svgDisplay.style.display = 'none';
+    }
+    
+    // Show text editor with SVG content
+    editor.value = content;
+    editor.style.display = 'block';
+    
+    logToConsole(`Switched to text editing mode for ${fileName}`, 'info');
+}
+
 // Save the current file
 function saveCurrentFile() {
     if (currentFile) {
@@ -366,6 +482,12 @@ function saveCurrentFile() {
         // Check if this is an image file
         if (fileData && typeof fileData === 'object' && fileData.type === 'image') {
             logToConsole('Image files cannot be edited and are already saved.', 'info');
+            return;
+        }
+        
+        // Check if this is an SVG file being displayed in rendered mode
+        if (fileName.toLowerCase().endsWith('.svg') && editor.style.display === 'none') {
+            logToConsole('SVG is in preview mode. Click "Edit as Text" to make changes.', 'info');
             return;
         }
         
@@ -430,6 +552,37 @@ function hideCreateFileModal() {
     fileNameInput.placeholder = 'e.g., index.html';
     const confirmBtn = document.getElementById('confirmCreateBtn');
     confirmBtn.onclick = () => createNewFile(fileNameInput.value.trim());
+}
+
+// Show SVG Editor
+function showSVGEditor() {
+    const svgModal = document.getElementById('svgEditorModal');
+    svgModal.style.display = 'block';
+    
+    // Listen for SVG save events from the iframe
+    window.addEventListener('message', handleSVGMessage);
+}
+
+// Hide SVG Editor
+function hideSVGEditor() {
+    const svgModal = document.getElementById('svgEditorModal');
+    svgModal.style.display = 'none';
+    
+    // Remove the message listener when closing
+    window.removeEventListener('message', handleSVGMessage);
+    
+    // Refresh file icons to show any new drawings
+    loadFiles();
+}
+
+// Handle messages from SVG editor iframe
+function handleSVGMessage(event) {
+    if (event.data && event.data.type === 'svgSaved') {
+        // The SVG editor saved a file, refresh our file system
+        setTimeout(() => {
+            loadFiles(); // Refresh to show the new drawing
+        }, 100);
+    }
 }
 
 // Create a new file
@@ -934,6 +1087,8 @@ listeners = {
     "importBtn" : showImportDialog,
     "cancelCreateBtn" : hideCreateFileModal,
     "clearConsoleBtn" : clearConsole,
+    "svgEditorBtn" : showSVGEditor,
+    "closeSVGEditorBtn" : hideSVGEditor,
 }
 
 for (const [id, listener] of Object.entries(listeners)) {

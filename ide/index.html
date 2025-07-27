@@ -25,10 +25,12 @@
     <div class="header">
         <h1>Web3.5 IDE</h1>
         <div>
+            <button id="homeBtn" class="btn" onclick="window.location.href='../'" title="Back to Apps">🏠 Home</button>
             <button id="newFileBtn" class="btn">New File</button>
             <button id="newFolderBtn" class="btn">New Folder</button>
             <button id="importBtn" class="btn">Import</button>
             <button id="saveBtn" class="btn">Save</button>
+            <button id="svgEditorBtn" class="btn">SVG Editor</button>
             <button id="deleteBtn" class="btn btn-danger">Delete</button>
         </div>
     </div>
@@ -70,6 +72,14 @@
                 <button id="cancelCreateBtn" class="btn btn-danger">Cancel</button>
                 <button id="confirmCreateBtn" class="btn">Create</button>
             </div>
+        </div>
+    </div>
+
+    <!-- SVG Editor Modal -->
+    <div class="svg-editor-modal" id="svgEditorModal">
+        <div class="svg-modal-content">
+            <iframe id="svgEditorFrame" src="../svgeditor/index.html" style="width: 100%; height: 100%; border: none;"></iframe>
+            <button id="closeSVGEditorBtn" class="close-svg-btn">×</button>
         </div>
     </div>
     
