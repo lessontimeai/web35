@@ -42,17 +42,17 @@
         }
 
         .apps-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            display: flex;
             gap: 2rem;
-            max-width: 800px;
-            width: 100%;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         .app-card {
             background: white;
             border-radius: 20px;
-            padding: 2rem;
+            padding: 1rem;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
@@ -60,6 +60,12 @@
             text-decoration: none;
             color: inherit;
             border: 3px solid transparent;
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .app-card:hover {
@@ -69,14 +75,14 @@
         }
 
         .app-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 1.5rem;
+            width: 60px;
+            height: 60px;
+            margin: 0;
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
+            font-size: 2rem;
             color: white;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
@@ -90,23 +96,80 @@
         }
 
         .app-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #333;
+            display: none;
         }
 
         .app-description {
-            color: #666;
-            line-height: 1.5;
-            margin-bottom: 1rem;
+            display: none;
         }
 
         .app-features {
+            display: none;
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: absolute;
+            top: 130px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            min-width: 280px;
+            max-width: 320px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            text-align: left;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .tooltip::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 8px solid rgba(0, 0, 0, 0.9);
+        }
+
+        .tooltip-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .tooltip-description {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+            color: #e0e0e0;
+        }
+
+        .tooltip-features {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: center;
+            gap: 0.3rem;
+        }
+
+        .tooltip-feature-tag {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
         }
 
         .feature-tag {
@@ -131,12 +194,24 @@
             }
             
             .apps-container {
-                grid-template-columns: 1fr;
                 gap: 1.5rem;
             }
             
             .app-card {
-                padding: 1.5rem;
+                width: 100px;
+                height: 100px;
+            }
+            
+            .app-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.8rem;
+            }
+            
+            .tooltip {
+                top: 110px;
+                min-width: 250px;
+                max-width: 280px;
             }
         }
 
@@ -182,7 +257,7 @@
     </div>
 
     <div class="apps-container">
-        <a href="ide/" class="app-card">
+        <a href="ide/" class="app-card" data-app="ide">
             <div class="app-icon ide-icon">
                 💻
             </div>
@@ -196,9 +271,19 @@
                 <span class="feature-tag">P2P Collaboration</span>
                 <span class="feature-tag">LLM Integration</span>
             </div>
+            <div class="tooltip">
+                <div class="tooltip-title">Web35 IDE</div>
+                <div class="tooltip-description">A powerful web-based development environment with syntax highlighting, neural networks, and peer-to-peer collaboration.</div>
+                <div class="tooltip-features">
+                    <span class="tooltip-feature-tag">Code Editor</span>
+                    <span class="tooltip-feature-tag">Neural Networks</span>
+                    <span class="tooltip-feature-tag">P2P Collaboration</span>
+                    <span class="tooltip-feature-tag">LLM Integration</span>
+                </div>
+            </div>
         </a>
 
-        <a href="svgeditor/" class="app-card">
+        <a href="svgeditor/" class="app-card" data-app="svg">
             <div class="app-icon svg-icon">
                 🎨
             </div>
@@ -212,22 +297,53 @@
                 <span class="feature-tag">Drag & Drop</span>
                 <span class="feature-tag">Export SVG</span>
             </div>
+            <div class="tooltip">
+                <div class="tooltip-title">SVG Editor</div>
+                <div class="tooltip-description">Create and edit SVG graphics with intuitive tools for drawing shapes, adding text, and designing vector artwork.</div>
+                <div class="tooltip-features">
+                    <span class="tooltip-feature-tag">Shape Tools</span>
+                    <span class="tooltip-feature-tag">Text Editor</span>
+                    <span class="tooltip-feature-tag">Drag & Drop</span>
+                    <span class="tooltip-feature-tag">Export SVG</span>
+                </div>
+            </div>
         </a>
     </div>
 
-    <div class="footer">
-        <p>Click on any app to get started</p>
-    </div>
 
     <script>
-        // Add some interactive effects
+        // Tooltip functionality with 2-second delay
+        let tooltipTimeouts = {};
+        
         document.querySelectorAll('.app-card').forEach(card => {
+            const tooltip = card.querySelector('.tooltip');
+            const cardId = card.dataset.app;
+            
+            // Hover enter - start timer for showing tooltip
             card.addEventListener('mouseenter', () => {
                 card.style.transform = 'translateY(-8px) scale(1.02)';
+                
+                // Clear any existing timeout
+                if (tooltipTimeouts[cardId]) {
+                    clearTimeout(tooltipTimeouts[cardId]);
+                }
+                
+                // Set 2-second delay for showing tooltip
+                tooltipTimeouts[cardId] = setTimeout(() => {
+                    tooltip.classList.add('show');
+                }, 2000);
             });
             
+            // Hover leave - hide tooltip immediately and clear timer
             card.addEventListener('mouseleave', () => {
                 card.style.transform = 'translateY(0) scale(1)';
+                
+                // Clear timeout and hide tooltip
+                if (tooltipTimeouts[cardId]) {
+                    clearTimeout(tooltipTimeouts[cardId]);
+                    delete tooltipTimeouts[cardId];
+                }
+                tooltip.classList.remove('show');
             });
 
             // Add click animation
@@ -255,6 +371,18 @@
         setTimeout(() => {
             document.querySelector('.header').style.animation = 'fadeInUp 0.8s ease forwards';
         }, 200);
+
+        // Hide all tooltips when clicking elsewhere
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.app-card')) {
+                document.querySelectorAll('.tooltip').forEach(tooltip => {
+                    tooltip.classList.remove('show');
+                });
+                // Clear all timeouts
+                Object.values(tooltipTimeouts).forEach(timeout => clearTimeout(timeout));
+                tooltipTimeouts = {};
+            }
+        });
     </script>
 </body>
 </html>

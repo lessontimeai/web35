@@ -1,0 +1,204 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header improvements for SVG Editor */
+.header {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    padding: 1rem;
+    border-bottom: 3px solid #1a252f;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* Close button styling for SVG Editor */
+.close-btn {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+.close-btn:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226);
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+.close-btn:active {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
+}
+
+.close-mark {
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.toolbar {
+    background: #34495e;
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    border-bottom: 3px solid #2c3e50;
+}
+
+.tool-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    background: #445566;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.tool-group label {
+    color: #ecf0f1;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+button.active {
+    background: #e74c3c;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+input[type="range"] {
+    width: 80px;
+}
+
+input[type="number"] {
+    width: 60px;
+    padding: 0.3rem;
+    border: 1px solid #bdc3c7;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.canvas-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    background: #ecf0f1;
+}
+
+#canvas {
+    background: white;
+    border: 2px solid #bdc3c7;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: crosshair;
+}
+
+.text-input {
+    position: absolute;
+    background: white;
+    border: 2px solid #3498db;
+    padding: 0.5rem;
+    font-size: 16px;
+    border-radius: 4px;
+    z-index: 1000;
+    display: none;
+}
+
+.controls {
+    background: #2c3e50;
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.controls button {
+    background: #e67e22;
+}
+
+.controls button:hover {
+    background: #d35400;
+}
+
+.shape-preview {
+    display: none;
+    stroke-dasharray: 5,5;
+    stroke-dashoffset: 0;
+    animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+@media (max-width: 768px) {
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .tool-group {
+        justify-content: space-between;
+    }
+}
