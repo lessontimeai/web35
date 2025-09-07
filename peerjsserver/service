@@ -1,0 +1,15 @@
+[Unit]
+Description=PeerJS Server
+After=network.target
+
+[Service]
+ExecStart=peerjs --port 1445 --key XXX --path /peers --allow_discovery --sslcert CERTPATH --sslkey PEMPATH
+Restart=always
+User=root
+Environment=PATH=PEERJSPATH
+Environment=NODE_ENV=production
+WorkingDirectory=/data/servers/peerserver
+
+[Install]
+WantedBy=multi-user.target
+                     
