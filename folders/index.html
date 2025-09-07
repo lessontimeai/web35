@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Folder Viewer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-bottom: 1rem;
+    }
+    ul {
+      list-style: none;
+      padding-left: 20px;
+    }
+    li::before {
+      content: "📄 ";
+    }
+    li.folder::before {
+      content: "📁 ";
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📂 Folder Viewer</h1>
+
+  <button onclick="openFolder()">Open Folder</button>
+  <input type="file" id="fallbackInput" webkitdirectory multiple style="display:none" onchange="fallbackHandler(event)">
+
+  <ul id="fileList"></ul>
+
+  <script>
+    const fileList = document.getElementById('fileList');
+
+    async function openFolder() {
+      if ('showDirectoryPicker' in window) {
+        try {
+          const dirHandle = await window.showDirectoryPicker();
+          fileList.innerHTML = '';
+          await readDirectory(dirHandle, fileList);
+        } catch (err) {
+          console.error('Directory access cancelled or failed:', err);
+        }
+      } else {
+        // Fallback for browsers without File System Access API
+        document.getElementById('fallbackInput').click();
+      }
+    }
+
+    async function readDirectory(directoryHandle, parentElement) {
+      for await (const [name, handle] of directoryHandle.entries()) {
+        const li = document.createElement('li');
+        li.textContent = name;
+        li.classList.add(handle.kind);
+        parentElement.appendChild(li);
+
+        if (handle.kind === 'directory') {
+          const nestedUl = document.createElement('ul');
+          li.appendChild(nestedUl);
+          await readDirectory(handle, nestedUl);
+        }
+      }
+    }
+
+    function fallbackHandler(event) {
+      const files = Array.from(event.target.files);
+      fileList.innerHTML = '';
+
+      const tree = {};
+
+      files.forEach(file => {
+        const parts = file.webkitRelativePath.split('/');
+        let current = tree;
+        parts.forEach((part, index) => {
+          if (!current[part]) {
+            current[part] = index === parts.length - 1 ? file : {};
+          }
+          current = current[part];
+        });
+      });
+
+      function renderTree(obj, parentUl) {
+        for (const key in obj) {
+          const li = document.createElement('li');
+          li.textContent = key;
+          li.classList.add(typeof obj[key] === 'object' ? 'folder' : 'file');
+          parentUl.appendChild(li);
+          if (typeof obj[key] === 'object') {
+            const nestedUl = document.createElement('ul');
+            li.appendChild(nestedUl);
+            renderTree(obj[key], nestedUl);
+          }
+        }
+      }
+
+      renderTree(tree, fileList);
+    }
+  </script>
+
+</body>
+</html>
