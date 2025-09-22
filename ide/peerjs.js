@@ -7,7 +7,7 @@ class PeerNetwork {
       peerConfig: options.peerConfig || {
         host: LESSONTIME_HOST,
         port: LESSONTIME_PORT,
-        path: '/datahunter',
+        path: '/peers',
         secure: true,
         key: `.${LESSONTIME_KEY}.`
       },

@@ -107,9 +107,7 @@ function saveFiles() {
     }
     
     saveRecursive(files);
-    
-    // Also save the legacy 'fs' key for backward compatibility
-    localStorage.setItem('fs', JSON.stringify(files));
+
 }
 
 // Save console history to local storage
@@ -121,7 +119,7 @@ function saveConsoleHistory() {
 function isFolder(obj) {
     if (typeof obj !== 'object' || obj === null) return false;
     if (obj.type === 'image') return false; // Image files are objects but not folders
-    return Object.keys(obj).length > 0;
+    return true;
 }
 
 // Get current directory contents based on currentPath
@@ -949,8 +947,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data["command"] != null){
                 if (data["command"]=="ls"){
                     console.log("Received ls command from peer: ", data);
-                    const storedFiles = localStorage.getItem('fs');
-                    network.sendTo(data["peerId"], {"files": storedFiles});
+                    network.sendTo(data["peerId"], {"files": JSON.stringify(files)});
                 }
                 if (data["command"]=="paste"){
                     console.log("Received file command from peer: ", data);
