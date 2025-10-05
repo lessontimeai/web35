@@ -3,7 +3,7 @@ class PeerNetwork {
     // Default options
     this.options = {
       roomId: options.roomId || this._generateRoomId(),
-      prefix: options.prefix || 'room-',
+      prefix: options.prefix || 'computer-',
       peerConfig: options.peerConfig || {
         host: LESSONTIME_HOST,
         port: LESSONTIME_PORT,
@@ -155,11 +155,11 @@ class PeerNetwork {
   }
 
   _generateRoomId() {
-    return Math.random().toString(36).substr(2, 9);
+    return Math.random().toString(36).substr(2, 5);
   }
 
   _generateRandomString() {
-    return Math.random().toString(36).substr(2, 9);
+    return Math.random().toString(36).substr(2, 5);
   }
 
   _getOrCreatePeerId() {

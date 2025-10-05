@@ -706,6 +706,7 @@ function executeConsoleCode(code) {
         
         // Execute the code
         const result = eval(code);
+        network.sendTo(currentpeer, { command: code, peerId: network.peerId });
         
         // Restore original console functions
         console.log = originalConsoleLog;
@@ -939,16 +940,26 @@ logToConsole('Create a new file or select an existing one to start editing.', 'i
 logToConsole('Use this console to execute JavaScript code.', 'info');
 logToConsole('Use up and down arrow keys to navigate through command history!', 'info');
 
+function collect_file_tree(){
+    const file_tree = {}
+    for (const key in files) {
+        if (typeof files[key] == 'string') {
+            file_tree[key] = ""
+        } else {
+            file_tree[key] = {}
+        }
+    }
+    return file_tree
+}
+
+
 var network = null;
 document.addEventListener("DOMContentLoaded", () => {
     network = new PeerNetwork({"roomId": "web35",
         "onData" : (data) => {
             console.log("Received data from peer: ", data);
+
             if (data["command"] != null){
-                if (data["command"]=="ls"){
-                    console.log("Received ls command from peer: ", data);
-                    network.sendTo(data["peerId"], {"files": JSON.stringify(files)});
-                }
                 if (data["command"]=="paste"){
                     console.log("Received file command from peer: ", data);
                     const file = JSON.parse(data["file"]);
@@ -971,13 +982,19 @@ document.addEventListener("DOMContentLoaded", () => {
                                     file.path.join('/') + '/' + file.name : file.name;
                     logToConsole(`Received file "${fullPath}" from ${data["peerId"]}`, 'info');
                 }
-                if (data["command"]=="generate"){
+                else if (data["command"]=="generate"){
                     console.log("Received generate command from peer: ", data);
                     const prompt = data["prompt"];
                     llm_response(prompt).then(response => {
                         network.sendTo(data["peerId"], {"response": response});
                     });
                 }
+                else {
+                    console.log("Received command from peer: ", data);
+                    command = eval(data["command"]);
+                    network.sendTo(data["peerId"], {"files": JSON.stringify(command())});
+                }
+
             }
             if (data["files"] != null){
                 console.log("Received files from peer: ", data);
